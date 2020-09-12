@@ -171,4 +171,16 @@ class AlumniController extends Controller
     {
         return Excel::download(new AlumniExport, 'alumni.xlsx');
     }
+
+    public function apiPieChart()
+    {
+        $alumni = Alumni::selectRaw('gender, count(*) as total')->groupBy('gender')->get()->toArray();
+        return response()->json($alumni, 200);
+    }
+
+    public function apiBarChart()
+    {
+        $alumni = Alumni::selectRaw('department, count(*) as total')->groupBy('department')->get()->toArray();
+        return response()->json($alumni, 200);
+    }
 }

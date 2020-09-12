@@ -301,7 +301,7 @@
                         type: 'POST',
                         data: {
                             name: $('#name').val(),
-                            gender: $('.gender').val(),
+                            gender: $("input[name='gender']:checked").val(),
                             department: $('#department').val(),
                             graduation_date: $('#graduation_date').val(),
                             ipk: $('#ipk').val()
@@ -349,7 +349,7 @@
                         type: 'PUT',
                         data: {
                             name: $('#nameEdit').val(),
-                            gender: $('.genderEdit').val(),
+                            gender: $("input[name='genderEdit']:checked").val(),
                             department: $('#departmentEdit').val(),
                             graduation_date: $('#graduation_dateEdit').val(),
                             ipk: $('#ipkEdit').val()
@@ -371,17 +371,19 @@
                             'X-CSRF-TOKEN': $('meta[name="csrf_token"]').attr('content')
                         }
                     });
-                    $.ajax({
-                        url: "/alumni/" + id,
-                        type: 'DELETE',
-                        data: {
-                            id: id
-                        },
-                        success: function(result){
-                            console.log(result)
-                            table.ajax.reload()
-                        }
-                    });
+                    if (confirm("Yakin dihapus?") == true) {
+                        $.ajax({
+                            url: "/alumni/" + id,
+                            type: 'DELETE',
+                            data: {
+                                id: id
+                            },
+                            success: function(result){
+                                console.log(result)
+                                table.ajax.reload()
+                            }
+                        });
+                    }
                 });
             });
             $('.date input').datepicker({
@@ -390,14 +392,18 @@
             });
         </script>
         <script>
+            $(document).ready( function () {
+                fetchData();
+            });
+            var chartPie;
             var piechartalumni = {!! json_encode($piechartalumni) !!};
-            var dt = [];
-            var content = [];
+            var dtPie = [];
+            var contentPie = [];
             for(var i in piechartalumni) {
-                dt = [piechartalumni[i].gender, piechartalumni[i].total, "true"];
-                content.push(dt);
+                dtPie = [piechartalumni[i].gender, piechartalumni[i].total, "true"];
+                contentPie.push(dtPie);
             }
-            Highcharts.chart('container', {
+            chartPie = new Highcharts.chart('container', {
                 chart: {
                     styledMode: true
                 },
@@ -411,26 +417,62 @@
                     type: 'pie',
                     allowPointSelect: true,
                     keys: ['name', 'y', 'selected', 'sliced'],
-                    data: content,
+                    data: contentPie,
                     showInLegend: true
-                }]
+                }],
+                events: {
+                    load: fetchData
+                }
             });
-        </script>
-        <script>
+            function fetchData() {
+                setInterval(function () {
+                    $.ajax({
+                        url: "{{ route('alumni.apipiechart') }}",
+                        type: 'GET',
+                        success: function(data) {
+                            var dt = [];
+                            var content = [];
+                            for(var i in data) {
+                                dt = [data[i].gender, data[i].total, "true"];
+                                content.push(dt);
+                            }
+                            chartPie.series[0].setData(content);
+                            chartPie.redraw();
+                        },
+                        cache: false
+                    });
+                    $.ajax({
+                        url: "{{ route('alumni.apibarchart') }}",
+                        type: 'GET',
+                        success: function(data) {
+                            var dt = [];
+                            var content = [];
+                            for(var i in data) {
+                                dt = [data[i].gender, data[i].total, "true"];
+                                content.push(dt);
+                            }
+                            chartBar.series[0].setData(content);
+                            chartBar.redraw();
+                        },
+                        cache: false
+                    });
+                }, 5000);
+            }
+            var chartBar;
             var barchartalumni = {!! json_encode($barchartalumni) !!};
-            var dt = {};
-            var content = [];
+            var dtBar = {};
+            var contentBar = [];
             var department = []
             for(var i in barchartalumni) {
                 department.push(barchartalumni[i].department)
-                dt = {
+                dtBar = {
                     "name": barchartalumni[i].department,
                     "color": "blue",
                     "y": barchartalumni[i].total
                 }
-                content.push(dt)
+                contentBar.push(dtBar)
             }
-            Highcharts.chart('container2', {
+            chartBar = Highcharts.chart('container2', {
                 title: {
                     text: 'Statistik Alumni Berdasarkan Jurusan'
                 },
@@ -441,8 +483,11 @@
                     categories: department
                 },
                 series: [{
-                    data: content
-                }]
+                    data: contentBar
+                }],
+                events: {
+                    load: fetchData
+                }
             });
         </script>
     </body>
